@@ -67,7 +67,7 @@ class MainWindow(Qt.QMainWindow):
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
         colors = vtk.vtkNamedColors()
-        self.ren.SetBackground(0.8,0.8,0.8) # you can change the background color here
+        self.ren.SetBackground(colors.GetColor3d("White")) # you can change the background color here
 
         # Start by creating a black/white lookup table.
         self.bwLut = vtk.vtkLookupTable()
@@ -284,6 +284,8 @@ class MainWindow(Qt.QMainWindow):
        
         # set the range for the XY cut plane range 
         self.qt_zslider.setRange(0, self.dim[2]-1)
+        self.qt_yslider.setRange(0, self.dim[1]-1)
+        self.qt_xslider.setRange(0, self.dim[0]-1)
 
 
         # Get the data outline
