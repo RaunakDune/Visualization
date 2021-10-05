@@ -152,58 +152,60 @@ class MainWindow(Qt.QMainWindow):
 
         groupBox_layout.addWidget(Qt.QLabel("3D cut planes:"))
         ''' Add a slider bar for XY slicing plane '''
-        hbox =  Qt.QHBoxLayout()
+        hbox_xy =  Qt.QHBoxLayout()
         self.qt_xy_plane_checkbox = Qt.QCheckBox("Show XY Cut Plane")
         self.qt_xy_plane_checkbox.setChecked(False)
         self.qt_xy_plane_checkbox.toggled.connect(self.on_checkbox_change)
-        hbox.addWidget(self.qt_xy_plane_checkbox)
+        hbox_xy.addWidget(self.qt_xy_plane_checkbox)
 
         
 
         self.qt_zslider = Qt.QSlider(QtCore.Qt.Horizontal)
         self.qt_zslider.valueChanged.connect(self.on_zslider_change)
-        hbox.addWidget(self.qt_zslider)
+        hbox_xy.addWidget(self.qt_zslider)
         self.label_zslider = Qt.QLabel()
-        hbox.addWidget(self.label_zslider)
+        hbox_xy.addWidget(self.label_zslider)
         self.label_zslider.setText("Z index:"+str(self.qt_zslider.value()))
         z_slider_widget = Qt.QWidget()
-        z_slider_widget.setLayout(hbox)
+        z_slider_widget.setLayout(hbox_xy)
         groupBox_layout.addWidget(z_slider_widget)
         
         ''' XZ Cut Plane '''
 
+        hbox_xz =  Qt.QHBoxLayout()
         self.qt_xz_plane_checkbox = Qt.QCheckBox("Show XZ Cut Plane")
         self.qt_xz_plane_checkbox.setChecked(False)
         self.qt_xz_plane_checkbox.toggled.connect(self.on_checkbox_change)
-        hbox.addWidget(self.qt_xz_plane_checkbox)
+        hbox_xz.addWidget(self.qt_xz_plane_checkbox)
 
         self.qt_yslider = Qt.QSlider(QtCore.Qt.Horizontal)
         self.qt_yslider.valueChanged.connect(self.on_yslider_change)
-        hbox.addWidget(self.qt_yslider)
+        hbox_xz.addWidget(self.qt_yslider)
         self.label_yslider = Qt.QLabel()
-        hbox.addWidget(self.label_yslider)
+        hbox_xz.addWidget(self.label_yslider)
         self.label_yslider.setText("Y index:"+str(self.qt_yslider.value()))
         y_slider_widget = Qt.QWidget()
-        y_slider_widget.setLayout(hbox)
+        y_slider_widget.setLayout(hbox_xz)
         groupBox_layout.addWidget(y_slider_widget)
 
         ''' YZ Cut Plane '''
         
+        hbox_yz =  Qt.QHBoxLayout()
         self.qt_yz_plane_checkbox = Qt.QCheckBox("Show YZ Cut Plane")
         self.qt_yz_plane_checkbox.setChecked(False)
         self.qt_yz_plane_checkbox.toggled.connect(self.on_checkbox_change)
-        hbox.addWidget(self.qt_yz_plane_checkbox)
+        hbox_yz.addWidget(self.qt_yz_plane_checkbox)
 
 
-        self.qt_zslider = Qt.QSlider(QtCore.Qt.Horizontal)
-        self.qt_zslider.valueChanged.connect(self.on_zslider_change)
-        hbox.addWidget(self.qt_zslider)
-        self.label_zslider = Qt.QLabel()
-        hbox.addWidget(self.label_zslider)
-        self.label_zslider.setText("Z index:"+str(self.qt_zslider.value()))
-        z_slider_widget = Qt.QWidget()
-        z_slider_widget.setLayout(hbox)
-        groupBox_layout.addWidget(z_slider_widget)
+        self.qt_xslider = Qt.QSlider(QtCore.Qt.Horizontal)
+        self.qt_xslider.valueChanged.connect(self.on_xslider_change)
+        hbox_yz.addWidget(self.qt_xslider)
+        self.label_xslider = Qt.QLabel()
+        hbox_yz.addWidget(self.label_xslider)
+        self.label_xslider.setText("X index:"+str(self.qt_xslider.value()))
+        x_slider_widget = Qt.QWidget()
+        x_slider_widget.setLayout(hbox_yz)
+        groupBox_layout.addWidget(x_slider_widget)
 
 
 
@@ -255,6 +257,10 @@ class MainWindow(Qt.QMainWindow):
             self.ren.RemoveActor(self.xy_plane)
 
         # You probably need to remove additional actors below...
+        if hasattr(self, 'xz_plane'):
+            self.ren.RemoveActor(self.xz_plane)
+        if hasattr(self, 'yz_plane'):
+            self.ren.RemoveActor(self.yz_plane)
             
         
         self.scalar_range = [self.reader.GetOutput().GetScalarRange()[0], self.reader.GetOutput().GetScalarRange()[1]]
@@ -334,30 +340,30 @@ class MainWindow(Qt.QMainWindow):
             self.vtkWidget.GetRenderWindow().Render() 
 
     def on_yslider_change(self, value):
-        self.label_zslider.setText("Z index:"+str(self.qt_zslider.value()))
-        current_zID = int(self.qt_zslider.value())
+        self.label_yslider.setText("Y index:"+str(self.qt_yslider.value()))
+        current_yID = int(self.qt_yslider.value())
         
-        if self.qt_xy_plane_checkbox.isChecked() == True:           
-            xy_plane_Colors = vtk.vtkImageMapToColors()
-            xy_plane_Colors.SetInputConnection(self.reader.GetOutputPort())
-            xy_plane_Colors.SetLookupTable(self.bwLut)
-            xy_plane_Colors.Update()
+        if self.qt_xz_plane_checkbox.isChecked() == True:           
+            xz_plane_Colors = vtk.vtkImageMapToColors()
+            xz_plane_Colors.SetInputConnection(self.reader.GetOutputPort())
+            xz_plane_Colors.SetLookupTable(self.bwLut)
+            xz_plane_Colors.Update()
             
-            if hasattr(self, 'xy_plane'):
-                self.ren.RemoveActor(self.xy_plane)
+            if hasattr(self, 'xz_plane'):
+                self.ren.RemoveActor(self.xz_plane)
           
     
-            self.xy_plane = vtk.vtkImageActor()
-            self.xy_plane.GetMapper().SetInputConnection(xy_plane_Colors.GetOutputPort())
-            self.xy_plane.SetDisplayExtent(0, self.dim[0], 0, self.dim[1], current_zID, current_zID) # Z
+            self.xz_plane = vtk.vtkImageActor()
+            self.xz_plane.GetMapper().SetInputConnection(xz_plane_Colors.GetOutputPort())
+            self.xz_plane.SetDisplayExtent(0, self.dim[0], current_yID, current_yID, 0, self.dim[2] ) # Y
             
-            self.ren.AddActor(self.xy_plane)
+            self.ren.AddActor(self.xz_plane)
             
             # Re-render the screen
             self.vtkWidget.GetRenderWindow().Render() 
 
     def on_xslider_change(self, value):
-        self.label_xslider.setText("Z index:"+str(self.qt_xslider.value()))
+        self.label_xslider.setText("X index:"+str(self.qt_xslider.value()))
         current_xID = int(self.qt_xslider.value())
         
         if self.qt_yz_plane_checkbox.isChecked() == True:           
@@ -372,7 +378,7 @@ class MainWindow(Qt.QMainWindow):
     
             self.yz_plane = vtk.vtkImageActor()
             self.yz_plane.GetMapper().SetInputConnection(yz_plane_Colors.GetOutputPort())
-            self.yz_plane.SetDisplayExtent(0, self.dim[0], 0, self.dim[1], current_xID, current_xID) # Z
+            self.yz_plane.SetDisplayExtent(current_xID, current_xID, 0, self.dim[1], 0, self.dim[2] ) # X
             
             self.ren.AddActor(self.yz_plane)
             
