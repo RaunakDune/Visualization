@@ -465,6 +465,7 @@ class MainWindow(Qt.QMainWindow):
         # The volume will be displayed by ray-cast alpha compositing.
         # A ray-cast mapper is needed to do the ray-casting.
         volumeMapper = vtk.vtkFixedPointVolumeRayCastMapper()
+        # volumeMapper = vtk.vtkSmartVolumeMapper()
 
     
 
@@ -483,17 +484,32 @@ class MainWindow(Qt.QMainWindow):
 
     
         # Use gradient information to enhanced DVR
-        # volumeGradientOpacity = vtk.vtkPiecewiseFunction()
-        # volumeGradientOpacity.AddPoint(0, 0.0)
-        # volumeGradientOpacity.AddPoint(90, 0.5)
-        # volumeGradientOpacity.AddPoint(100, 1.0)
+        volumeGradientOpacity = vtk.vtkPiecewiseFunction()
+        volumeGradientOpacity.AddPoint(0, 0.0)
+        volumeGradientOpacity.AddPoint(90, 0.5)
+        volumeGradientOpacity.AddPoint(100, 1.0)
     
         
         # Next, you should set the volume property
         # 
+
+        volumeProperty = vtk.vtkVolumeProperty()
+        volumeProperty.SetColor(volumeColor)
+        volumeProperty.SetScalarOpacity(volumeScalarOpacity)
+        volumeProperty.SetGradientOpacity(volumeGradientOpacity)
+        volumeProperty.SetInterpolationTypeToLinear()
+
+        volumeProperty.ShadeOn()
+        volumeProperty.SetAmbient(0.4)
+        volumeProperty.SetDiffuse(0.6)
+        volumeProperty.SetSpecular(0.2)
     
         # Create a vtkVolume object 
         # set its mapper created above and its property.
+
+        self.volume = vtk.vtkVolume()
+        self.volume.SetMapper(volumeMapper)
+        self.volume.SetProperty(volumeProperty)
     
         # Finally, add the volume to the renderer
         self.ren.AddViewProp(self.volume)
@@ -556,7 +572,7 @@ class MainWindow(Qt.QMainWindow):
             1150, 0.85
     '''
     def load_color_transfer_values(self):
-        fileName = self.fname_label
+        fileName = str(self.fname_label.text())
         self.volume_colors = []
         self.volume_opacity = []
         with open(fileName, 'r') as f:
