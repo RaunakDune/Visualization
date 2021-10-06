@@ -24,7 +24,7 @@ class MainWindow(Qt.QMainWindow):
         Qt.QMainWindow.__init__(self, parent)
         
         ''' Step 1: Initialize the Qt window '''
-        self.setWindowTitle("COSC 6344 Visualization YOUR NAME")
+        self.setWindowTitle("COSC 6344 Visualization - Assignment 3 - Raunak Sarbajna")
         self.resize(1000,self.height())
         self.frame = Qt.QFrame() # Create a main window frame to add ui widgets
         self.mainLayout = Qt.QHBoxLayout()  # Set layout - Lines up widgets horizontally
@@ -148,6 +148,16 @@ class MainWindow(Qt.QMainWindow):
         isoSurf_hwidget.setLayout(hbox)
         groupBox_layout.addWidget(isoSurf_hwidget)
 
+        hbox_iso =  Qt.QHBoxLayout()
+        self.iso_slider = Qt.QSlider(QtCore.Qt.Horizontal)
+        self.iso_slider.valueChanged.connect(self.extract_one_isosurface)
+        hbox_iso.addWidget(self.iso_slider)
+        self.label_isoslider = Qt.QLabel()
+        hbox_iso.addWidget(self.label_isoslider)
+        self.label_isoslider.setText("Opacity:"+str(self.iso_slider.value())+"%")
+        iso_slider_widget = Qt.QWidget()
+        iso_slider_widget.setLayout(hbox_iso)
+        groupBox_layout.addWidget(iso_slider_widget)
 
 
         groupBox_layout.addWidget(Qt.QLabel("3D cut planes:"))
@@ -212,12 +222,20 @@ class MainWindow(Qt.QMainWindow):
         groupBox_layout.addWidget(Qt.QLabel("Raycasting:"))
         
         hbox =  Qt.QHBoxLayout()
-        self.qt_dvr_checkbox = Qt.QCheckBox("Show Volume Rendering: ")
+        self.qt_dvr_checkbox = Qt.QCheckBox("Show Volume Rendering ")
         self.qt_dvr_checkbox.setChecked(False)
         self.qt_dvr_checkbox.toggled.connect(self.on_checkbox_change)
         hbox.addWidget(self.qt_dvr_checkbox)             
         qt_volWidget = Qt.QWidget()
         qt_volWidget.setLayout(hbox)
+
+        self.fname_label = Qt.QLabel()
+        hbox.addWidget(self.fname_label)
+
+        self.qt_browser_button = Qt.QPushButton('Load Control Points')
+        self.qt_browser_button.clicked.connect(self.on_loadcp_clicked)
+        self.qt_browser_button.show()
+        hbox.addWidget(self.qt_browser_button)
         
         groupBox_layout.addWidget(qt_volWidget)
         
@@ -230,6 +248,15 @@ class MainWindow(Qt.QMainWindow):
         if dlg.exec_():
             filenames = dlg.selectedFiles()
             self.qt_file_name.setText(filenames[0])
+
+    def on_loadcp_clicked(self):
+        dlg = Qt.QFileDialog()
+        dlg.setFileMode(Qt.QFileDialog.AnyFile)
+        dlg.setNameFilter("loadable files (*.txt)")
+        
+        if dlg.exec_():
+            filenames = dlg.selectedFiles()
+            self.fname_label.setText(filenames[0])
     
     def open_vtk_file(self):
         '''Read and verify the vtk input file '''
@@ -281,6 +308,12 @@ class MainWindow(Qt.QMainWindow):
                 
         # set the range for the iso-surface spinner
         self.qt_iso_threshold.setRange(self.scalar_range[0],self.scalar_range[1])
+        # self.iso_slider.setRange(0, 1)
+        self.iso_slider.setMinimum(1)
+        self.iso_slider.setMaximum(100)
+        self.iso_slider.setValue(50)
+        self.iso_slider.setTickPosition(Qt.QSlider.TicksBelow)
+        self.iso_slider.setTickInterval(10)
        
         # set the range for the XY cut plane range 
         self.qt_zslider.setRange(0, self.dim[2]-1)
@@ -332,6 +365,9 @@ class MainWindow(Qt.QMainWindow):
             self.isoSurf_actor.GetProperty().SetDiffuseColor(colors.GetColor3d("Orange"))
             self.isoSurf_actor.GetProperty().SetSpecular(.3)
             self.isoSurf_actor.GetProperty().SetSpecularPower(20)
+
+            self.isoSurf_actor.GetProperty().SetOpacity(self.iso_slider.value()/100)
+            self.label_isoslider.setText("Opacity:"+str(self.iso_slider.value())+"%")
 
             self.ren.AddActor(self.isoSurf_actor)
 
@@ -472,6 +508,18 @@ class MainWindow(Qt.QMainWindow):
                 self.ren.RemoveActor(self.xy_plane)
             # Re-render the screen
             self.vtkWidget.GetRenderWindow().Render()
+
+        if self.qt_xz_plane_checkbox.isChecked() == False:    
+            if hasattr(self, 'xz_plane'):
+                self.ren.RemoveActor(self.xz_plane)
+            # Re-render the screen
+            self.vtkWidget.GetRenderWindow().Render()
+
+        if self.qt_yz_plane_checkbox.isChecked() == False:    
+            if hasattr(self, 'yz_plane'):
+                self.ren.RemoveActor(self.yz_plane)
+            # Re-render the screen
+            self.vtkWidget.GetRenderWindow().Render()
            
         if self.qt_isoSurf_checkbox.isChecked() == False:
             if hasattr(self, 'isoSurf_actor'):
@@ -508,7 +556,7 @@ class MainWindow(Qt.QMainWindow):
             1150, 0.85
     '''
     def load_color_transfer_values(self):
-        fileName = "rendering_config.txt"
+        fileName = self.fname_label
         self.volume_colors = []
         self.volume_opacity = []
         with open(fileName, 'r') as f:
