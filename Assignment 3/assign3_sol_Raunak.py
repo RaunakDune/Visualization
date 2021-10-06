@@ -313,6 +313,29 @@ class MainWindow(Qt.QMainWindow):
             
         if self.qt_isoSurf_checkbox.isChecked() == True:            
             isoSurfExtractor = vtk.vtkMarchingCubes()
+            isoSurfExtractor.SetInputConnection(self.reader.GetOutputPort())
+            isoSurfExtractor.SetValue(0, self.qt_iso_threshold.value())
+
+            isoSurfStripper = vtk.vtkStripper()
+            isoSurfStripper.SetInputConnection(isoSurfExtractor.GetOutputPort())
+            isoSurfStripper.Update()
+
+            isoSurf_mapper = vtk.vtkPolyDataMapper()
+            isoSurf_mapper.SetInputConnection( isoSurfStripper.GetOutputPort() )
+            isoSurf_mapper.ScalarVisibilityOff()
+
+            self.isoSurf_actor = vtk.vtkActor() 
+            self.isoSurf_actor.SetMapper( isoSurf_mapper )
+
+            colors = vtk.vtkNamedColors()
+
+            self.isoSurf_actor.GetProperty().SetDiffuseColor(colors.GetColor3d("Orange"))
+            self.isoSurf_actor.GetProperty().SetSpecular(.3)
+            self.isoSurf_actor.GetProperty().SetSpecularPower(20)
+
+            self.ren.AddActor(self.isoSurf_actor)
+
+
        
         # Re-render the screen
         self.vtkWidget.GetRenderWindow().Render()
