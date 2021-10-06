@@ -297,7 +297,15 @@ class MainWindow(Qt.QMainWindow):
         
         #Update the lookup table
         # YOU NEED TO UPDATE THE FOLLOWING RANGE BASED ON THE LOADED DATA!!!!
-        self.bwLut.SetTableRange(self.scalar_range[0], self.scalar_range[1]/2.)
+        print(self.scalar_range[0], self.scalar_range[1]/2.)
+        if (self.scalar_range[0] < 0):
+            self.min_scalar = 0
+            self.max_scalar = 100
+        else:
+            self.min_scalar = self.scalar_range[0]
+            self.max_scalar = self.scalar_range[1]
+
+        self.bwLut.SetTableRange(self.min_scalar, self.max_scalar/2.)
         self.bwLut.SetSaturationRange(0, 0)
         self.bwLut.SetHueRange(0, 0)
         self.bwLut.SetValueRange(0, 1)
@@ -464,8 +472,9 @@ class MainWindow(Qt.QMainWindow):
         
         # The volume will be displayed by ray-cast alpha compositing.
         # A ray-cast mapper is needed to do the ray-casting.
-        volumeMapper = vtk.vtkFixedPointVolumeRayCastMapper()
-        # volumeMapper = vtk.vtkSmartVolumeMapper()
+        # volumeMapper = vtk.vtkFixedPointVolumeRayCastMapper()
+        volumeMapper = vtk.vtkSmartVolumeMapper()
+        volumeMapper.SetInputConnection(self.reader.GetOutputPort())
 
     
 
@@ -473,6 +482,7 @@ class MainWindow(Qt.QMainWindow):
         # The control points are loaded from a file
         volumeColor = vtk.vtkColorTransferFunction()
         for colorMap in self.volume_colors:
+            # print(colorMap)
             volumeColor.AddRGBPoint(colorMap[0], colorMap[1], colorMap[2], colorMap[3])
         
     
@@ -480,6 +490,7 @@ class MainWindow(Qt.QMainWindow):
         # The control points are loaded from a file
         volumeScalarOpacity = vtk.vtkPiecewiseFunction()
         for opacityMap in self.volume_opacity:
+            # print(opacityMap)
             volumeScalarOpacity.AddPoint(opacityMap[0], opacityMap[1])
 
     
@@ -512,7 +523,10 @@ class MainWindow(Qt.QMainWindow):
         self.volume.SetProperty(volumeProperty)
     
         # Finally, add the volume to the renderer
+        # print("before adding volume renderer")
         self.ren.AddViewProp(self.volume)
+
+        # self.vtkWidget.GetRenderWindow().Render()
 
      
     ''' Handle the checkbox button event '''
@@ -552,6 +566,7 @@ class MainWindow(Qt.QMainWindow):
             if hasattr(self, 'volume'):
                 self.ren.RemoveViewProp(self.volume)
             self.comp_raycasting()
+            # print("entering raycasting loop")
             # Re-render the screen
             self.vtkWidget.GetRenderWindow().Render()
             
