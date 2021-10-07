@@ -297,7 +297,7 @@ class MainWindow(Qt.QMainWindow):
         
         #Update the lookup table
         # YOU NEED TO UPDATE THE FOLLOWING RANGE BASED ON THE LOADED DATA!!!!
-        print(self.scalar_range[0], self.scalar_range[1]/2.)
+        # print(self.scalar_range[0], self.scalar_range[1]/2.)
         if (self.scalar_range[0] < 0):
             self.min_scalar = 0
             self.max_scalar = 100
@@ -496,9 +496,10 @@ class MainWindow(Qt.QMainWindow):
     
         # Use gradient information to enhanced DVR
         volumeGradientOpacity = vtk.vtkPiecewiseFunction()
-        volumeGradientOpacity.AddPoint(0, 0.0)
-        volumeGradientOpacity.AddPoint(90, 0.5)
-        volumeGradientOpacity.AddPoint(100, 1.0)
+        for opacityMap in self.volume_opacity:
+            volumeGradientOpacity.AddPoint(opacityMap[0], opacityMap[1])
+        # volumeGradientOpacity.AddPoint(90, 0.5)
+        # volumeGradientOpacity.AddPoint(100, 1.0)
     
         
         # Next, you should set the volume property
