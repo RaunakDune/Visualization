@@ -7,6 +7,6 @@
 
 - [x] Assignment 1 **Charts and plots**
 - [x] Assignment 2 **2D Scalar Field Visualization**
-- [ ] Assignment 3 **3D Scalar Field Visualization**
-- [ ] Assignment 4
+- [x] Assignment 3 **3D Scalar Field Visualization**
+- [ ] Assignment 4 **2D Steady Vector Field Visualization**
 - [ ] Assignment 5
