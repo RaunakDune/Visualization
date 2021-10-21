@@ -510,7 +510,7 @@ class MainWindow(Qt.QMainWindow):
                 stream_tracer.SetStartPosition(x, y, bound[4]) 
                 stream_tracer.SetMaximumPropagation(integration_len)
                 stream_tracer.SetInitialIntegrationStep(self.space_x )
-                stream_tracer.SetIntegrationDirectionToForward()
+                stream_tracer.SetIntegrationDirectionToBoth()
 
                 stream_tracer.Update()
 
