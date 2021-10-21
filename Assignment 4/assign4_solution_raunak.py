@@ -1,8 +1,9 @@
-#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Oct 17 08:49:30 2021
 
-'''
-    Skeleton code for a GUI application created by using PyQT and PyVTK
-'''
+@author: Raunak Sarbajna
+"""
 
 
 import sys
@@ -187,9 +188,9 @@ class MainWindow(Qt.QMainWindow):
         self.groupBox_layout.addWidget(maxIntLen)
         self.max_len = Qt.QSpinBox()
          # set the initial values of some parameters
-        self.max_len.setValue(500)
-        self.max_len.setRange(100, 1000)
-        self.max_len.setSingleStep (50)
+        self.max_len.setValue(40)
+        self.max_len.setRange(0, 100)
+        self.max_len.setSingleStep (5)
         self.groupBox_layout.addWidget(self.max_len)
 
         self.LIC_checkbox = Qt.QCheckBox("LIC On")
@@ -481,7 +482,7 @@ class MainWindow(Qt.QMainWindow):
         licImage.SetOrigin(self.bounds[0], self.bounds[2], self.bounds[4])
         licImage.AllocateScalars(vtk.VTK_UNSIGNED_CHAR,3)
         
-        integration_len = (self.bounds[1]-self.bounds[0])/40.0
+        integration_len = (self.bounds[1]-self.bounds[0])/self.max_len.value()
 
         # LIC calculation   (PLEAE COMPLETE)
 
@@ -577,7 +578,7 @@ class MainWindow(Qt.QMainWindow):
         # self.bounds = vectorFieldPolyData.GetBounds()
         bound = self.reader.GetPolyDataOutput().GetBounds()  
 
-        length = (bound[1]-bound[0])/40.0 # Make this a user-specified parameter on the interface
+        length = (bound[1]-bound[0])/self.max_len.value() # Make this a user-specified parameter on the interface
         licImage = self.Compute_LIC(length)
 
 
