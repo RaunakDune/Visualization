@@ -182,6 +182,16 @@ class MainWindow(Qt.QMainWindow):
         
 
         ''' Add widgets for LIC '''
+
+        maxIntLen = Qt.QLabel("Choose Maximum Integration Length:")
+        self.groupBox_layout.addWidget(maxIntLen)
+        self.max_len = Qt.QSpinBox()
+         # set the initial values of some parameters
+        self.max_len.setValue(500)
+        self.max_len.setRange(100, 1000)
+        self.max_len.setSingleStep (50)
+        self.groupBox_layout.addWidget(self.max_len)
+
         self.LIC_checkbox = Qt.QCheckBox("LIC On")
         self.LIC_checkbox.setChecked(False)
         self.LIC_checkbox.toggled.connect(self.on_LIC_checkbox)
@@ -385,6 +395,7 @@ class MainWindow(Qt.QMainWindow):
 
             stream_tracer.SetIntegratorTypeToRungeKutta45()
             stream_tracer.SetIntegrationDirectionToBoth()
+            stream_tracer.Update()
 
 
             # Step 4: Visualization
@@ -473,6 +484,55 @@ class MainWindow(Qt.QMainWindow):
         integration_len = (self.bounds[1]-self.bounds[0])/40.0
 
         # LIC calculation   (PLEAE COMPLETE)
+
+        # seedPoints = vtk.vtkPoints() 
+        bound = self.reader.GetPolyDataOutput().GetBounds()
+        # print(bound)
+        # return licImage
+        for i in range(0, self.IMG_RES):
+            for j in range(0, self.IMG_RES):
+                x_j = (j + 0.5) / self.IMG_RES # remember j is the column index that corresponds to x direction!
+                y_i = (i + 0.5) / self.IMG_RES # i is the row index corresponding to the y direction!
+                x = bound[0] + x_j * (bound[1] - bound[0])
+                y = bound[2] + y_i * (bound[3] - bound[2])
+                # seedPoints.InsertNextPoint(x, y, bound[4])
+                print(x,y)
+
+                # Need to put the seed points in a vtkPolyData object
+                # seedPolyData  = vtk.vtkPolyData()
+                # seedPolyData.SetPoints(seedPoints)
+
+                stream_tracer = vtk.vtkStreamTracer()
+                stream_tracer.SetInputData(self.reader.GetPolyDataOutput()) # set vector field
+                # stream_tracer.SetSourceData(seedPolyData) # pass in the seeds
+                stream_tracer.SetStartPosition(x, y, bound[4]) # pass in the seeds
+                stream_tracer.SetMaximumPropagation(integration_len)
+                stream_tracer.SetInitialIntegrationStep(self.space_x)
+                stream_tracer.SetIntegrationDirectionToForward()
+
+                stream_tracer.Update()
+
+                streamline = stream_tracer.GetOutput()
+                integrationPts = streamline.GetPoints()
+                nPts = integrationPts.GetNumberOfPoints()
+                print(integrationPts.GetBounds())
+                # return licImage
+                curSum = 0
+                for val in range (nPts):
+                    fin_x = integrationPts.GetPoint(val)[0]
+                    fin_y = integrationPts.GetPoint(val)[1]
+                    # print(fin_x, fin_y)
+                    fin_j = (self.IMG_RES * ( (fin_x - bound[0]) / (bound[1] - bound[0]) )) - 0.5
+                    fin_i = (self.IMG_RES * ( (fin_y - bound[2]) / (bound[3] - bound[2]) )) - 0.5
+                    print(fin_i, fin_j)
+                    curSum += self.noise_tex[i][j][0]
+
+                return licImage
+                if nPts == 0:
+                    self.LIC_tex[i][j][0] = self.LIC_tex[i][j][1] = self.LIC_tex[i][j][2] = 0
+                else:
+                    self.LIC_tex[i][j][0] = self.LIC_tex[i][j][1] = self.LIC_tex[i][j][2] = curSum/nPts
+                # return licImage
  
 
        # Convert the LIC texture to a vtkImageData      
@@ -510,8 +570,11 @@ class MainWindow(Qt.QMainWindow):
         # Step 2: Create a white noise texture
         self.create_noise_texture()
 
-        # Step 3: Compute the LIC texture     
-        length = (self.bounds[1]-self.bounds[0])/40.0 # Make this a user-specified parameter on the interface
+        # Step 3: Compute the LIC texture
+        # self.bounds = vectorFieldPolyData.GetBounds()
+        bound = self.reader.GetPolyDataOutput().GetBounds()  
+
+        length = (bound[1]-bound[0])/40.0 # Make this a user-specified parameter on the interface
         licImage = self.Compute_LIC(length)
 
 
