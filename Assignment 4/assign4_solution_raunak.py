@@ -496,7 +496,8 @@ class MainWindow(Qt.QMainWindow):
                 x = bound[0] + x_j * (bound[1] - bound[0])
                 y = bound[2] + y_i * (bound[3] - bound[2])
                 # seedPoints.InsertNextPoint(x, y, bound[4])
-                print(x,y)
+                # print(self.IMG_RES)
+                # print(self.space_x)
 
                 # Need to put the seed points in a vtkPolyData object
                 # seedPolyData  = vtk.vtkPolyData()
@@ -505,9 +506,9 @@ class MainWindow(Qt.QMainWindow):
                 stream_tracer = vtk.vtkStreamTracer()
                 stream_tracer.SetInputData(self.reader.GetPolyDataOutput()) # set vector field
                 # stream_tracer.SetSourceData(seedPolyData) # pass in the seeds
-                stream_tracer.SetStartPosition(x, y, bound[4]) # pass in the seeds
+                stream_tracer.SetStartPosition(x, y, bound[4]) 
                 stream_tracer.SetMaximumPropagation(integration_len)
-                stream_tracer.SetInitialIntegrationStep(self.space_x)
+                stream_tracer.SetInitialIntegrationStep(self.space_x )
                 stream_tracer.SetIntegrationDirectionToForward()
 
                 stream_tracer.Update()
@@ -515,7 +516,7 @@ class MainWindow(Qt.QMainWindow):
                 streamline = stream_tracer.GetOutput()
                 integrationPts = streamline.GetPoints()
                 nPts = integrationPts.GetNumberOfPoints()
-                print(integrationPts.GetBounds())
+                # print(integrationPts.GetBounds())
                 # return licImage
                 curSum = 0
                 for val in range (nPts):
@@ -524,10 +525,12 @@ class MainWindow(Qt.QMainWindow):
                     # print(fin_x, fin_y)
                     fin_j = (self.IMG_RES * ( (fin_x - bound[0]) / (bound[1] - bound[0]) )) - 0.5
                     fin_i = (self.IMG_RES * ( (fin_y - bound[2]) / (bound[3] - bound[2]) )) - 0.5
-                    print(fin_i, fin_j)
-                    curSum += self.noise_tex[i][j][0]
+                    # fin_j = (self.IMG_RES * fin_x) - 0.5
+                    # fin_i = (self.IMG_RES * fin_y) - 0.5
+                    # print(fin_i, fin_j)
+                    curSum += self.noise_tex[int(fin_i)][int(fin_j)][0]
 
-                return licImage
+                # return licImage
                 if nPts == 0:
                     self.LIC_tex[i][j][0] = self.LIC_tex[i][j][1] = self.LIC_tex[i][j][2] = 0
                 else:
