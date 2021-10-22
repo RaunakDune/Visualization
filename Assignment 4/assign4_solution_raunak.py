@@ -74,6 +74,15 @@ class MainWindow(Qt.QMainWindow):
         colors = vtk.vtkNamedColors()
         self.ren.SetBackground(colors.GetColor3d("White")) # you can change the background color here
 
+        # Start by creating a black/white lookup table.
+        self.bwLut = vtk.vtkLookupTable()
+        # YOU need adjust the following range to address the dynamic range issue!
+        self.bwLut.SetTableRange(0, 2)
+        self.bwLut.SetSaturationRange(0, 0)
+        self.bwLut.SetHueRange(0, 0)
+        self.bwLut.SetValueRange(0, 1)
+        self.bwLut.Build()  # effective built
+
         # Start the vtk screen
         self.ren.ResetCamera()
         self.show()
@@ -240,6 +249,24 @@ class MainWindow(Qt.QMainWindow):
             self.ren.RemoveActor(self.lic_actor) 
 
         self.seeding_strategy = 0 # Uniform seeding is the default strategy
+
+        self.scalar_range = [self.reader.GetOutput().GetScalarRange()[0], self.reader.GetOutput().GetScalarRange()[1]]
+        
+        #Update the lookup table
+        # YOU NEED TO UPDATE THE FOLLOWING RANGE BASED ON THE LOADED DATA!!!!
+        # print(self.scalar_range[0], self.scalar_range[1]/2.)
+        if (self.scalar_range[0] < 0):
+            self.min_scalar = 0
+            self.max_scalar = 100
+        else:
+            self.min_scalar = self.scalar_range[0]
+            self.max_scalar = self.scalar_range[1]
+
+        self.bwLut.SetTableRange(self.min_scalar, self.max_scalar/2.)
+        self.bwLut.SetSaturationRange(0, 0)
+        self.bwLut.SetHueRange(0, 240)
+        self.bwLut.SetValueRange(1, 1)
+        self.bwLut.Build()  # effective built
 
         # Get the data outline
         outlineData = vtk.vtkOutlineFilter()
@@ -452,6 +479,7 @@ class MainWindow(Qt.QMainWindow):
         
         self.LICPolyData = vtk.vtkPolyData() # We will reuse this object for the final visualization of the LIC texture
         self.LICPolyData.SetPoints(gridPoints)
+        # print(self.LICPolyData.GetNumberOfPoints())
  
     
 
@@ -542,11 +570,18 @@ class MainWindow(Qt.QMainWindow):
        # Convert the LIC texture to a vtkImageData      
         k = 0
         for j in range( 0, self.IMG_RES):
-            for i in range( 0, self.IMG_RES):        
-            
+            for i in range( 0, self.IMG_RES):
+                # try:                
+                    # r = (self.LIC_tex[i][j][0] * 0.5) + (self.LICPolyData.GetPoint((i+1)*(j+1)) * 0.5)
+                    # g = (self.LIC_tex[i][j][1] * 0.5) + (self.LICPolyData.GetPoint((i+1)*(j+1)) * 0.5)
+                    # b = (self.LIC_tex[i][j][2] * 0.5) + (self.LICPolyData.GetPoint((i+1)*(j+1)) * 0.5)
                 r = self.LIC_tex[i][j][0]
                 g = self.LIC_tex[i][j][1]
                 b = self.LIC_tex[i][j][2]
+                # except TypeError:
+                #     print(self.LICPolyData.GetPoint((i+1)*(j+1)))
+                #     print(type(self.LICPolyData.GetPoint((i+1)*(j+1))))
+                #     return licImage
                                                
                 # Update the color value for the licImage
                 licImage.SetScalarComponentFromDouble(j,i,k,0, r) # Note: we need to flip j,i to get the correct result
@@ -579,6 +614,12 @@ class MainWindow(Qt.QMainWindow):
         bound = self.reader.GetPolyDataOutput().GetBounds()  
 
         length = (bound[1]-bound[0])/self.max_len.value() # Make this a user-specified parameter on the interface
+        self.generate_uniform_grid()
+        # tex_Colors = vtk.vtkImageMapToColors()
+        # tex_Colors.SetInputConnection(self.LICPolyData.GetOutputPort())
+        # tex_Colors.SetLookupTable(self.bwLut)
+        # tex_Colors.Update()
+
         licImage = self.Compute_LIC(length)
 
 
