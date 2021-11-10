@@ -168,6 +168,9 @@ class MainWindow(Qt.QMainWindow):
         streamline_hwidget.setLayout(hbox_streamline)
         #self.groupBox_layout.addWidget(streamline_widget)
         vbox_streamline.addWidget(streamline_hwidget)
+
+        label_seed = Qt.QLabel("Select Seeding Strategy")
+        self.groupBox_layout.addWidget(label_seed)
      
         vbox_seed_strategy = Qt.QVBoxLayout()
         # Add radio buttons for the selection of the seed generation strategy
@@ -180,6 +183,11 @@ class MainWindow(Qt.QMainWindow):
         self.random_seed_radio.setChecked(False)
         self.random_seed_radio.toggled.connect(self.on_seeding_strategy)
         vbox_seed_strategy.addWidget(self.random_seed_radio)
+        
+        self.widget_seed_radio = Qt.QRadioButton("Seeding via Widgets")
+        self.widget_seed_radio.setChecked(False)
+        self.widget_seed_radio.toggled.connect(self.on_seeding_strategy)
+        vbox_seed_strategy.addWidget(self.widget_seed_radio)
         self.seeding_strategy = 0 # Uniform seeding is the default strategy 
 
         seedingstrategy = Qt.QWidget()
@@ -188,7 +196,36 @@ class MainWindow(Qt.QMainWindow):
 
         streamline_widgets = Qt.QWidget()
         streamline_widgets.setLayout(vbox_streamline)
-        self.groupBox_layout.addWidget(streamline_widgets)       
+        self.groupBox_layout.addWidget(streamline_widgets)
+
+        label_seed = Qt.QLabel("Select Streamline Type")
+        self.groupBox_layout.addWidget(label_seed)
+     
+        vbox_renderer = Qt.QVBoxLayout()
+        # Add radio buttons for the selection of the seed generation strategy
+        self.tube_radio = Qt.QRadioButton("Tube")
+        self.tube_radio.setChecked(True)
+        self.tube_radio.toggled.connect(self.on_seeding_strategy)
+        vbox_renderer.addWidget(self.tube_radio)
+
+        self.ribbon_radio = Qt.QRadioButton("Ribbon")
+        self.ribbon_radio.setChecked(False)
+        self.ribbon_radio.toggled.connect(self.on_seeding_strategy)
+        vbox_renderer.addWidget(self.ribbon_radio)
+        
+        # self.widget_seed_radio = Qt.QRadioButton("Seeding via Widgets")
+        # self.widget_seed_radio.setChecked(False)
+        # self.widget_seed_radio.toggled.connect(self.on_seeding_strategy)
+        # vbox_seed_strategy.addWidget(self.widget_seed_radio)
+        # self.seeding_strategy = 0 # Uniform seeding is the default strategy 
+
+        render_strategy = Qt.QWidget()
+        render_strategy.setLayout(vbox_renderer)
+        vbox_streamline.addWidget(render_strategy)
+
+        rendering_widgets = Qt.QWidget()
+        rendering_widgets.setLayout(vbox_streamline)
+        self.groupBox_layout.addWidget(rendering_widgets)     
 
 
 
@@ -329,10 +366,16 @@ class MainWindow(Qt.QMainWindow):
     def on_seeding_strategy(self):
         if self.uniform_seed_radio.isChecked() == True:
             self.random_seed_radio.setChecked(False)
+            self.widget_seed_radio.setChecked(False)
             self.seeding_strategy = 0
         elif self.random_seed_radio.isChecked() ==  True:
+            self.widget_seed_radio.setChecked(False)
             self.uniform_seed_radio.setChecked(False)
             self.seeding_strategy = 1
+        elif self.widget_seed_radio.isChecked() ==  True:
+            self.random_seed_radio.setChecked(False)
+            self.uniform_seed_radio.setChecked(False)
+            self.seeding_strategy = 2
 
    
     '''         
@@ -346,7 +389,8 @@ class MainWindow(Qt.QMainWindow):
 
         # Generate the uniformly positioned seeds below!!
 
-        bound = self.reader.GetPolyDataOutput().GetBounds()
+        bound = self.reader.GetOutput().GetBounds()
+        print(bound)
         for i in range(num_seeds):
             for j in range(num_seeds):
                 for k in range(num_seeds):
@@ -373,7 +417,8 @@ class MainWindow(Qt.QMainWindow):
 
         # Generate the random seeds below!!
 
-        bound = self.reader.GetPolyDataOutput().GetBounds()
+        bound = self.reader.GetOutput().GetBounds()
+        print(bound)
         for i in range(numb_seeds):
             for j in range(numb_seeds):
                 for k in range(numb_seeds):
@@ -391,27 +436,14 @@ class MainWindow(Qt.QMainWindow):
         return seedPolyData
     
     def widget_generate_seeds(self):
-        numb_seeds = int (self.number_seeds.value())
-        seedPoints = vtk.vtkPoints()       
-
-        # Generate the random seeds below!!
-
-        bound = self.reader.GetPolyDataOutput().GetBounds()
-        for i in range(numb_seeds):
-            for j in range(numb_seeds):
-                for k in range(numb_seeds):
-                    x_i = i * (1.0/(numb_seeds - 1))
-                    y_j = j * (1.0/(numb_seeds - 1))
-                    z_k = k * (1.0/(numb_seeds - 1))
-                    x = bound[0] + x_i * (bound[1] - bound[0])
-                    y = bound[2] + y_j * (bound[3] - bound[2])
-                    z = bound[4] + z_k * (bound[5] - bound[4])
-                    seedPoints.InsertNextPoint(x, y, z)
-
-        # Need to put the seed points in a vtkPolyData object
-        seedPolyData  = vtk.vtkPolyData()
-        seedPolyData.SetPoints(seedPoints)
-        return seedPolyData
+        lineWidget = vtk.vtkLineWidget()
+        seeds = vtk.vtkPolyData()
+        lineWidget.SetInputData(self.reader.GetPolyDataOutput())
+        lineWidget.SetAlignToYAxis()
+        lineWidget.PlaceWidget()
+        lineWidget.GetPolyData(seeds)
+        lineWidget.ClampToBoundsOn()
+        return seeds
 
         
     ''' 
@@ -425,6 +457,8 @@ class MainWindow(Qt.QMainWindow):
                 seedPolyData = self.random_generate_seeds() # You also can try generate_seeding_line()
             elif self.seeding_strategy == 0:
                 seedPolyData = self.uniform_generate_seeds()
+            elif self.seeding_strategy == 2:
+                seedPolyData = self.widget_generate_seeds()
             
             # Step 2: Create a vtkStreamTracer object, set input data and seeding points
 
@@ -437,21 +471,35 @@ class MainWindow(Qt.QMainWindow):
             # to have the full list of parameters
 
             stream_tracer.SetIntegratorTypeToRungeKutta45()
-            stream_tracer.SetIntegrationDirectionToBoth()
+            stream_tracer.SetIntegrationDirectionToForward()
             stream_tracer.Update()
+
+            # stream_filter = vtk.vtkTubeFilter()
+            # stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
+            # stream_filter.SetInputArrayToProcess(1, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, "vectors")
+            # stream_filter.SetRadius(0.02)
+            # stream_filter.SetNumberOfSides(12)
+            # stream_filter.SetVaryRadiusToVaryRadiusByVector()
+
+            stream_filter = vtk.vtkRibbonFilter()
+            stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
+            stream_filter.SetWidth(0.1)
+            stream_filter.SetWidthFactor(5)
+
 
 
             # Step 4: Visualization
 
             stream_mapper = vtk.vtkPolyDataMapper()
-            stream_mapper.SetInputConnection(stream_tracer.GetOutputPort())
+            stream_mapper.SetInputConnection(stream_filter.GetOutputPort())
             stream_mapper.ScalarVisibilityOff()
             stream_mapper.Update()
 
             self.streamline_actor = vtk.vtkActor()
-            self.streamline_actor.GetProperty().SetColor(0,0,1)
+            # self.streamline_actor.GetProperty().SetColor(0,0,1)
             self.streamline_actor.SetMapper(stream_mapper)
-            self.streamline_actor.GetProperty().SetOpacity(0.4)
+            # self.streamline_actor.GetProperty().SetOpacity(0.4)
+            # self.streamline_actor.GetProperty().BackfaceCullingOn()
 
             self.ren.AddActor(self.streamline_actor)
                     
