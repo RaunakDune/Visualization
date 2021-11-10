@@ -59,7 +59,7 @@ class MainWindow(Qt.QMainWindow):
         Initialize the vtk variables for the visualization tasks
     '''    
     def init_vtk_widget(self):
-        #vtk.vtkObject.GlobalWarningDisplayOff() #Disable vtkOutputWindow - Comment out this line if you want to see the warning/error messages from vtk
+        vtk.vtkObject.GlobalWarningDisplayOff() #Disable vtkOutputWindow - Comment out this line if you want to see the warning/error messages from vtk
         
         # Create the graphics structure. The renderer renders into the render
         # window. The render window interactor captures mouse events and will
@@ -69,8 +69,8 @@ class MainWindow(Qt.QMainWindow):
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
         # The following set the interactor for 2D image style (i.e., no rotation)
-        style = vtk.vtkInteractorStyleImage()
-        self.iren.SetInteractorStyle(style)
+        # style = vtk.vtkInteractorStyleImage()
+        # self.iren.SetInteractorStyle(style)
         colors = vtk.vtkNamedColors()
         self.ren.SetBackground(colors.GetColor3d("White")) # you can change the background color here
 
@@ -132,7 +132,7 @@ class MainWindow(Qt.QMainWindow):
         self.arrow_scale = Qt.QDoubleSpinBox()
          # set the initial values of some parameters
         self.arrow_scale.setValue(0.03)
-        self.arrow_scale.setRange(0, 1)
+        self.arrow_scale.setRange(0, 20)
         self.arrow_scale.setSingleStep (0.01)
         hbox_arrowplot.addWidget(self.arrow_scale)
 
@@ -295,18 +295,20 @@ class MainWindow(Qt.QMainWindow):
             # print(int(self.max_points.value()))
             densityFilter.Update()
 
-            glyph2D = vtk.vtkGlyph2D()
-            glyph2D.SetSourceConnection(glyphSource.GetOutputPort())
-            glyph2D.SetInputData(densityFilter.GetOutput())
-            glyph2D.OrientOn()
-            glyph2D.SetScaleModeToScaleByVector()
+            glyph3D = vtk.vtkGlyph3D()
+            glyph3D.SetSourceConnection(glyphSource.GetOutputPort())
+            glyph3D.SetInputData(densityFilter.GetOutput())
+            # glyph2D.OrientOn()
+            # glyph3D.SetScaleModeToScaleByVector()
+            glyph3D.SetVectorModeToUseVector()
             # glyph2D.SetScaleFactor(0.03) # adjust the length of the arrows accordingly
             # print(self.arrow_scale.value())
-            glyph2D.SetScaleFactor(self.arrow_scale.value()) # adjust the length of the arrows accordingly
-            glyph2D.Update()
+            glyph3D.SetScaleFactor(self.arrow_scale.value()) # adjust the length of the arrows accordingly
+            glyph3D.SetColorModeToColorByScalar()
+            glyph3D.Update()
 
             arrows_mapper = vtk.vtkPolyDataMapper()
-            arrows_mapper.SetInputConnection(glyph2D.GetOutputPort())
+            arrows_mapper.SetInputConnection(glyph3D.GetOutputPort())
             arrows_mapper.Update()
             self.arrow_actor = vtk.vtkActor()
             self.arrow_actor.SetMapper(arrows_mapper)
@@ -338,7 +340,7 @@ class MainWindow(Qt.QMainWindow):
         for streamline placement
 
     '''
-    def uniform_generate_seeds(self):
+    def random_generate_seeds(self):
         num_seeds = int (self.number_seeds.value())
         seedPoints = vtk.vtkPoints()
 
@@ -347,11 +349,14 @@ class MainWindow(Qt.QMainWindow):
         bound = self.reader.GetPolyDataOutput().GetBounds()
         for i in range(num_seeds):
             for j in range(num_seeds):
-                x_i = random.randint(0,32768) / 32768.0
-                y_j = random.randint(0,32768) / 32768.0
-                x = bound[0] + x_i * (bound[1] - bound[0])
-                y = bound[2] + y_j * (bound[3] - bound[2])
-                seedPoints.InsertNextPoint(x, y, 0)
+                for k in range(num_seeds):
+                    x_i = random.randint(0,32768) / 32768.0
+                    y_j = random.randint(0,32768) / 32768.0
+                    z_k = random.randint(0,32768) / 32768.0
+                    x = bound[0] + x_i * (bound[1] - bound[0])
+                    y = bound[2] + y_j * (bound[3] - bound[2])
+                    z = bound[4] + z_k * (bound[5] - bound[4])
+                    seedPoints.InsertNextPoint(x, y, z)
 
         # Need to put the seed points in a vtkPolyData object
         seedPolyData  = vtk.vtkPolyData()
@@ -362,7 +367,7 @@ class MainWindow(Qt.QMainWindow):
         Complete the following function for genenerate random seeds 
         for streamline placement
     '''
-    def random_generate_seeds(self):
+    def uniform_generate_seeds(self):
         numb_seeds = int (self.number_seeds.value())
         seedPoints = vtk.vtkPoints()       
 
@@ -371,11 +376,37 @@ class MainWindow(Qt.QMainWindow):
         bound = self.reader.GetPolyDataOutput().GetBounds()
         for i in range(numb_seeds):
             for j in range(numb_seeds):
-                x_i = i * (1.0/(numb_seeds - 1))
-                y_j = j * (1.0/(numb_seeds - 1))
-                x = bound[0] + x_i * (bound[1] - bound[0])
-                y = bound[2] + y_j * (bound[3] - bound[2])
-                seedPoints.InsertNextPoint(x, y, 0)
+                for k in range(numb_seeds):
+                    x_i = i * (1.0/(numb_seeds - 1))
+                    y_j = j * (1.0/(numb_seeds - 1))
+                    z_k = k * (1.0/(numb_seeds - 1))
+                    x = bound[0] + x_i * (bound[1] - bound[0])
+                    y = bound[2] + y_j * (bound[3] - bound[2])
+                    z = bound[4] + z_k * (bound[5] - bound[4])
+                    seedPoints.InsertNextPoint(x, y, z)
+
+        # Need to put the seed points in a vtkPolyData object
+        seedPolyData  = vtk.vtkPolyData()
+        seedPolyData.SetPoints(seedPoints)
+        return seedPolyData
+    
+    def widget_generate_seeds(self):
+        numb_seeds = int (self.number_seeds.value())
+        seedPoints = vtk.vtkPoints()       
+
+        # Generate the random seeds below!!
+
+        bound = self.reader.GetPolyDataOutput().GetBounds()
+        for i in range(numb_seeds):
+            for j in range(numb_seeds):
+                for k in range(numb_seeds):
+                    x_i = i * (1.0/(numb_seeds - 1))
+                    y_j = j * (1.0/(numb_seeds - 1))
+                    z_k = k * (1.0/(numb_seeds - 1))
+                    x = bound[0] + x_i * (bound[1] - bound[0])
+                    y = bound[2] + y_j * (bound[3] - bound[2])
+                    z = bound[4] + z_k * (bound[5] - bound[4])
+                    seedPoints.InsertNextPoint(x, y, z)
 
         # Need to put the seed points in a vtkPolyData object
         seedPolyData  = vtk.vtkPolyData()
