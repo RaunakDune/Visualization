@@ -140,8 +140,8 @@ class MainWindow(Qt.QMainWindow):
         hbox_arrowplot.addWidget(maxPointsLabel)
         self.max_points = Qt.QDoubleSpinBox()
          # set the initial values of some parameters
-        self.max_points.setValue(500)
         self.max_points.setRange(200, 10000)
+        self.max_points.setValue(500)
         self.max_points.setSingleStep (100)
         hbox_arrowplot.addWidget(self.max_points)
 
@@ -170,7 +170,7 @@ class MainWindow(Qt.QMainWindow):
         vbox_streamline.addWidget(streamline_hwidget)
 
         label_seed = Qt.QLabel("Select Seeding Strategy")
-        self.groupBox_layout.addWidget(label_seed)
+        vbox_streamline.addWidget(label_seed)
      
         vbox_seed_strategy = Qt.QVBoxLayout()
         # Add radio buttons for the selection of the seed generation strategy
@@ -198,19 +198,30 @@ class MainWindow(Qt.QMainWindow):
         streamline_widgets.setLayout(vbox_streamline)
         self.groupBox_layout.addWidget(streamline_widgets)
 
-        label_seed = Qt.QLabel("Select Streamline Type")
-        self.groupBox_layout.addWidget(label_seed)
+        propLabel = Qt.QLabel("    Set maximum propagation Length:")
+        hbox_streamline.addWidget(propLabel)
+        self.propagation_length = Qt.QDoubleSpinBox()
+         # set the initial values of some parameters
+        self.propagation_length.setRange(100, 2000)
+        self.propagation_length.setValue(500)
+        self.propagation_length.setSingleStep (50)
+        hbox_streamline.addWidget(self.propagation_length)
+
+        label_render = Qt.QLabel("Select Streamline Type")
+        vbox_streamline.addWidget(label_render)
+
+        self.render_strategy = 0
      
         vbox_renderer = Qt.QVBoxLayout()
         # Add radio buttons for the selection of the seed generation strategy
         self.tube_radio = Qt.QRadioButton("Tube")
         self.tube_radio.setChecked(True)
-        self.tube_radio.toggled.connect(self.on_seeding_strategy)
+        self.tube_radio.toggled.connect(self.on_rendering_strategy)
         vbox_renderer.addWidget(self.tube_radio)
 
         self.ribbon_radio = Qt.QRadioButton("Ribbon")
         self.ribbon_radio.setChecked(False)
-        self.ribbon_radio.toggled.connect(self.on_seeding_strategy)
+        self.ribbon_radio.toggled.connect(self.on_rendering_strategy)
         vbox_renderer.addWidget(self.ribbon_radio)
         
         # self.widget_seed_radio = Qt.QRadioButton("Seeding via Widgets")
@@ -270,6 +281,7 @@ class MainWindow(Qt.QMainWindow):
             self.ren.RemoveActor(self.lic_actor) 
 
         self.seeding_strategy = 0 # Uniform seeding is the default strategy
+        self.render_strategy = 0 # Tubes are default
 
         self.scalar_range = [self.reader.GetOutput().GetScalarRange()[0], self.reader.GetOutput().GetScalarRange()[1]]
         
@@ -377,6 +389,14 @@ class MainWindow(Qt.QMainWindow):
             self.uniform_seed_radio.setChecked(False)
             self.seeding_strategy = 2
 
+    def on_rendering_strategy(self):
+        if self.tube_radio.isChecked() == True:
+            self.ribbon_radio.setChecked(False)
+            self.render_strategy = 0
+        elif self.ribbon_radio.isChecked() ==  True:
+            self.tube_radio.setChecked(False)
+            self.render_strategy = 1
+
    
     '''         
         Complete the following function for genenerate uniform seeds 
@@ -438,11 +458,13 @@ class MainWindow(Qt.QMainWindow):
     def widget_generate_seeds(self):
         lineWidget = vtk.vtkLineWidget()
         seeds = vtk.vtkPolyData()
-        lineWidget.SetInputData(self.reader.GetPolyDataOutput())
+        lineWidget.SetInputData(self.reader.GetOutput())
         lineWidget.SetAlignToYAxis()
         lineWidget.PlaceWidget()
         lineWidget.GetPolyData(seeds)
+        # lineWidget.SetKeyPressActivationValue('L')
         lineWidget.ClampToBoundsOn()
+        lineWidget.SetInteractor(self.iren)
         return seeds
 
         
@@ -463,28 +485,30 @@ class MainWindow(Qt.QMainWindow):
             # Step 2: Create a vtkStreamTracer object, set input data and seeding points
 
             stream_tracer = vtk.vtkStreamTracer()
-            stream_tracer.SetInputData(self.reader.GetPolyDataOutput()) # set vector field
+            stream_tracer.SetInputData(self.reader.GetOutput()) # set vector field
             stream_tracer.SetSourceData(seedPolyData) # pass in the seeds
 
             # Step 3: Set the parameters. 
             # Check the reference https://vtk.org/doc/nightly/html/classvtkStreamTracer.html
             # to have the full list of parameters
 
+            stream_tracer.SetMaximumPropagation(int(self.propagation_length.value()))
             stream_tracer.SetIntegratorTypeToRungeKutta45()
-            stream_tracer.SetIntegrationDirectionToForward()
+            stream_tracer.SetIntegrationDirectionToBoth()
             stream_tracer.Update()
 
-            # stream_filter = vtk.vtkTubeFilter()
-            # stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
-            # stream_filter.SetInputArrayToProcess(1, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, "vectors")
-            # stream_filter.SetRadius(0.02)
-            # stream_filter.SetNumberOfSides(12)
-            # stream_filter.SetVaryRadiusToVaryRadiusByVector()
-
-            stream_filter = vtk.vtkRibbonFilter()
-            stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
-            stream_filter.SetWidth(0.1)
-            stream_filter.SetWidthFactor(5)
+            if self.render_strategy == 0:
+                stream_filter = vtk.vtkTubeFilter()
+                stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
+                stream_filter.SetInputArrayToProcess(1, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, "vectors")
+                stream_filter.SetRadius(0.02)
+                stream_filter.SetNumberOfSides(12)
+                stream_filter.SetVaryRadiusToVaryRadiusByVector()
+            elif self.render_strategy == 1:
+                stream_filter = vtk.vtkRibbonFilter()
+                stream_filter.SetInputConnection(stream_tracer.GetOutputPort())
+                stream_filter.SetWidth(0.1)
+                stream_filter.SetWidthFactor(5)
 
 
 
@@ -496,10 +520,10 @@ class MainWindow(Qt.QMainWindow):
             stream_mapper.Update()
 
             self.streamline_actor = vtk.vtkActor()
-            # self.streamline_actor.GetProperty().SetColor(0,0,1)
+            self.streamline_actor.GetProperty().SetColor(0,0,1)
             self.streamline_actor.SetMapper(stream_mapper)
-            # self.streamline_actor.GetProperty().SetOpacity(0.4)
-            # self.streamline_actor.GetProperty().BackfaceCullingOn()
+            self.streamline_actor.GetProperty().SetOpacity(0.4)
+            self.streamline_actor.GetProperty().BackfaceCullingOn()
 
             self.ren.AddActor(self.streamline_actor)
                     
