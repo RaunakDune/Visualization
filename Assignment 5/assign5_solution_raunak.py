@@ -202,9 +202,9 @@ class MainWindow(Qt.QMainWindow):
         hbox_streamline.addWidget(propLabel)
         self.propagation_length = Qt.QDoubleSpinBox()
          # set the initial values of some parameters
-        self.propagation_length.setRange(100, 2000)
+        self.propagation_length.setRange(0, 2000)
         self.propagation_length.setValue(500)
-        self.propagation_length.setSingleStep (50)
+        self.propagation_length.setSingleStep (10)
         hbox_streamline.addWidget(self.propagation_length)
 
         label_render = Qt.QLabel("Select Streamline Type")
@@ -282,6 +282,7 @@ class MainWindow(Qt.QMainWindow):
 
         self.seeding_strategy = 0 # Uniform seeding is the default strategy
         self.render_strategy = 0 # Tubes are default
+        self.withinWidget = False # Not within line selector widget
 
         self.scalar_range = [self.reader.GetOutput().GetScalarRange()[0], self.reader.GetOutput().GetScalarRange()[1]]
         
@@ -456,16 +457,21 @@ class MainWindow(Qt.QMainWindow):
         return seedPolyData
     
     def widget_generate_seeds(self):
-        lineWidget = vtk.vtkLineWidget()
-        seeds = vtk.vtkPolyData()
-        lineWidget.SetInputData(self.reader.GetOutput())
-        lineWidget.SetAlignToYAxis()
-        lineWidget.PlaceWidget()
-        lineWidget.GetPolyData(seeds)
+        numb_seeds = int (self.number_seeds.value())
+
+        self.lineWidget = vtk.vtkLineWidget()
+        self.lineWidget.SetCurrentRenderer(self.ren)
+        self.lineWidget.SetInteractor(self.iren)
+
+        self.widget_seeds = vtk.vtkPolyData()
+        self.lineWidget.SetInputData(self.reader.GetOutput())
+        self.lineWidget.SetAlignToYAxis()
+        self.lineWidget.PlaceWidget()
+        self.lineWidget.GetPolyData(self.widget_seeds)
         # lineWidget.SetKeyPressActivationValue('L')
-        lineWidget.ClampToBoundsOn()
-        lineWidget.SetInteractor(self.iren)
-        return seeds
+        self.lineWidget.ClampToBoundsOn()
+        self.withinWidget = True
+        self.lineWidget.AddObserver("EndInteractionEvent", self.on_streamline_checkbox_change)
 
         
     ''' 
@@ -475,13 +481,18 @@ class MainWindow(Qt.QMainWindow):
     def on_streamline_checkbox_change(self):
         if self.qt_streamline_checkbox.isChecked() == True:
             # Step 1: Create seeding points 
-            if self.seeding_strategy == 1: 
-                seedPolyData = self.random_generate_seeds() # You also can try generate_seeding_line()
-            elif self.seeding_strategy == 0:
-                seedPolyData = self.uniform_generate_seeds()
-            elif self.seeding_strategy == 2:
-                seedPolyData = self.widget_generate_seeds()
+            if (self.withinWidget == False):
+                if self.seeding_strategy == 1: 
+                    seedPolyData = self.random_generate_seeds() # You also can try generate_seeding_line()
+                elif self.seeding_strategy == 0:
+                    seedPolyData = self.uniform_generate_seeds()
+                elif self.seeding_strategy == 2:
+                    self.widget_generate_seeds()
+                    seedPolyData = self.widget_seeds    
+            elif (self.withinWidget == True):
+                seedPolyData = self.widget_seeds
             
+            self.withinWidget = False
             # Step 2: Create a vtkStreamTracer object, set input data and seeding points
 
             stream_tracer = vtk.vtkStreamTracer()
